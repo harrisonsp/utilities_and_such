@@ -1,6 +1,8 @@
-import os,sys,time
-
-
+import os
+import sys
+import time
+import subprocess
+import shlex
 
 def printLotsOfVariables():
 	"""
@@ -21,8 +23,59 @@ def printLotsOfVariables():
 	print "\n\nDone printing %d instances of the variable: %s" % (int(count),name)
 	sys.stdout.flush()
 
-
+def ping(hostname):
+    """
+	ping a host, return true for up, false for down
+	"""
+    args_str = "ping -c 2 -W 3 " + hostname
+    args = shlex.split(args_str)
+    p = subprocess.Popen(args, stdout=subprocess.PIPE)
+    (out, err) = p.communicate()
+    return p.returncode == 0
+    # true  == 0 == up
+    # false != 0 == down / packet loss
 			
+
+def sendEmail(to_addr_list, cc_addr_list, subject, message, smtpserver='smtp.gmail.com:587'):
+    login = "redacted@gmail.com"
+    password = ""
+    header  = 'From: %s\n' % login
+    header += 'To: %s\n' % to_addr_list
+    header += 'Cc: %s\n' % cc_addr_list # could create a list, use ' % ','.join(cc_addr_list)
+    header += 'Subject: %s\n\n' % subject
+    message = header + message
+
+    server = smtplib.SMTP(smtpserver)
+    server.starttls()
+    server.login(login,password)
+    problems = server.sendmail(login, to_addr_list, message)
+    server.quit()
+    return problems
+    # could try yagmail instead
+
+
+def sendSlackMessage(message):
+    theChannel = "#monitoring_messages"
+    theUsername = "Monitoring"
+    theText = message
+    webhookURL = 'redacted'
+    myPayload = {
+            'channel': '',
+            'username':'',
+            'text':''
+    }
+    myPayload['channel'] = theChannel
+    myPayload['username'] = theUsername
+    myPayload['text'] = theText
+
+    postRequest = requests.post(webhookURL, json.dumps(myPayload))
+
+    if postRequest.status_code != 200:
+        raise ValueError(
+        'Request to slack returned an error %s, the response is:\n%s'
+        % (postRequest.status_code, postRequest.text)
+    )
+
 def allfunctions():
     	"""
 		Print out descriptions of functions in this file. Would be better to access and print the docstrings of the functions.
